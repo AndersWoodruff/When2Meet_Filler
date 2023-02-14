@@ -1,28 +1,30 @@
 import ICALParser from 'ical-js-parser';
-var input = document.createElement('input');
+
+
+const textbox = document.getElementById("body");
+const input = document.getElementById("input");
+
+textbox.addEventListener("mouseover", mouseover);
+textbox.addEventListener("mouseleave", mouseleave);
+textbox.addEventListener("click", clickinput);
+
 
 function clickinput(){
-    document.getElementsById("input").click();
+    input.click();
+    setcalendar();
 }
 
+function mouseover(){
+    textbox.style.backgroundColor = "lightGrey";
+}
+function mouseleave(){
+    textbox.style.backgroundColor = "white";
+}
 
+var buffer;
+let i;
+function setcalendar(){
+    buffer = prompt("How many minutes of buffer do you want around each calendar event?");
+    input.HTMLInputElement.files[0]
 
-
-// const textbox = document.getElementById("body");
-// // function function1(){
-// //     textbox.style.backgroundColor = "lightGrey";
-// // }
-// // function function2(){
-// //     textbox.style.backgroundColor = "white";
-// // }
-
-// // texbox.addEventListener("mouseover",function(){
-// //     this.style.background = "#0000ff";
-// // });
-// // texbox.addEventListener("mouseout",function(){
-// //     this.style.background = "#ff0000";
-// // });
-// // textbox.onmouseover = function1();
-// // textbox.onmouseleave = function2();
-// // object.addEventListener("mouseover", function1);
-// // object.addEventListener("mouseleave", function2);
+}
