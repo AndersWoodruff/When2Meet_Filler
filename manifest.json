@@ -1,0 +1,14 @@
+{
+    "name": "When2Meet Filler",
+    "description": "Extension Test",
+    "version": "10",
+    "manifest_version": 3,
+    "background":{
+        "service-worker":"background.js",
+        "type" : "module"
+    },
+    "action":{
+        "default_popup": "index.html",
+        "default_title": "When2Meet Filler"
+    }
+}
