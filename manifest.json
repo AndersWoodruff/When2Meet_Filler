@@ -3,12 +3,20 @@
     "description": "Extension Test",
     "version": "10",
     "manifest_version": 3,
-    "background":{
-        "service-worker":"background.js",
-        "type" : "module"
+    "background": {
+        "service_worker": "module.js"
     },
+    
     "action":{
         "default_popup": "index.html",
         "default_title": "When2Meet Filler"
-    }
+    },
+
+    "content_scripts": [
+        {
+          "js": ["edit.js"],
+          "matches": ["https://www.when2meet.com/*"],
+          "type": "module"
+        }
+    ]
 }
