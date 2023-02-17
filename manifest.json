@@ -4,9 +4,10 @@
     "version": "10",
     "manifest_version": 3,
     "background": {
-        "service_worker": "module.js"
+        "service_worker": "module.js",
+        "type": "module"
     },
-    
+
     "action":{
         "default_popup": "index.html",
         "default_title": "When2Meet Filler"
