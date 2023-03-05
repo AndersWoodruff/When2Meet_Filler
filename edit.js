@@ -1,3 +1,5 @@
+import events from "module.js";
+
 run();
 function run(){
     if(document.getElementById("YouGrid").style.display != "none"){
