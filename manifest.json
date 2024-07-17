@@ -15,5 +15,9 @@
           "matches": ["https://www.when2meet.com/*"],
           "type": "module"
         }
-    ] 
+    ],
+
+    "permissions": [
+      "activeTab"]
+
 }
