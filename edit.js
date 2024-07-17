@@ -1,4 +1,5 @@
 const ical = require('ical');
+var moment = require('moment');
 
 const monthDays = {
     // Mapping month numbers to the number of days
@@ -57,13 +58,11 @@ function getCeiling(num){
 function daysAway(startDate, endDate){
     let daytotal = 0;
 
-    console.log("NEW FUNC" + endDate.getYear() + " " + endDate.getMonth() + " " +endDate.getDate());
-
-    if (endDate.getYear() < startDate.year || (endDate.getYear() === startDate.year && endDate.getMonth() < startDate.month) || (endDate.getYear() === startDate.year && endDate.getMonth() == startDate.month && endDate.getDate() < startDate.day)){
+    if (endDate.getFullYear() < startDate.year || (endDate.getFullYear() === startDate.year && endDate.getMonth() < startDate.month) || (endDate.getFullYear() === startDate.year && endDate.getMonth() == startDate.month && endDate.getDate() < startDate.day)){
         return -1;
     }
 
-    while (startDate.year < endDate.getYear()){
+    while (startDate.year < endDate.getFullYear()){
         daytotal += startDate.year%4 != 0 ? 365: 366;
         startDate.year += 1;
     }
@@ -82,15 +81,13 @@ function slotsAway(startDate, endDate){
     return (endDate.getHours()-startDate.time)*4 + endDate.getMinutes()/15;
 }
 
-function findRecurrence(k){
+function findRecurrence(calendar, event, initDate, width, tz){
 
     // When dealing with calendar recurrences, you need a range of dates to query against,
     // because otherwise you can get an infinite number of calendar events.
-    var rangeStart = moment("2017-01-01");
-    var rangeEnd = moment("2017-12-31");
+    var rangeStart = moment(""+(initDate.year)+"-"+(initDate.month+1)+"-"+initDate.day);
+    var rangeEnd = rangeStart.clone().add(width-1, 'days');
 
-
-    var event = data[k]
     if (event.type === 'VEVENT') {
 
         var title = event.summary;
@@ -103,11 +100,7 @@ function findRecurrence(k){
         // Simple case - no recurrences, just print out the calendar event.
         if (typeof event.rrule === 'undefined')
         {
-            console.log('title:' + title);
-            console.log('startDate:' + startDate.format('MMMM Do YYYY, h:mm:ss a'));
-            console.log('endDate:' + endDate.format('MMMM Do YYYY, h:mm:ss a'));
-            console.log('duration:' + moment.duration(duration).humanize());
-            console.log();
+            return;
         }
 
         // Complicated case - if an RRULE exists, handle multiple recurrences of the event.
@@ -159,7 +152,7 @@ function findRecurrence(k){
                     // We found an override, so for this recurrence, use a potentially different title, start date, and duration.
                     curEvent = curEvent.recurrences[dateLookupKey];
                     startDate = moment(curEvent.start);
-                    curDuration = parseInt(moment(curEvent.end).format("x")) - parseInt(startDate.format("x"));
+                    curDuration = parseInt(moment(curEvent.start).format("x")) - parseInt(startDate.format("x"));
                 }
                 // If there's no recurrence override, check for an exception date.  Exception dates represent exceptions to the rule.
                 else if ((curEvent.exdate != undefined) && (curEvent.exdate[dateLookupKey] != undefined))
@@ -179,12 +172,22 @@ function findRecurrence(k){
                 }
 
                 if (showRecurrence === true) {
-
-                    console.log('title:' + recurrenceTitle);
-                    console.log('startDate:' + startDate.format('MMMM Do YYYY, h:mm:ss a'));
-                    console.log('endDate:' + endDate.format('MMMM Do YYYY, h:mm:ss a'));
-                    console.log('duration:' + moment.duration(curDuration).humanize());
-                    console.log();
+                    let i = 0;
+                    while (typeof calendar[i] !== "undefined"){
+                        i+=1;
+                    }
+                    
+                    calendar[i] = {
+                        start: startDate.toDate(),
+                        end: endDate.toDate(),
+                        type: "VEVENT",
+                        transparency: event.transparency,
+                        summary: event.summary
+                    }
+                    if (tz){
+                        calendar[i].start.tz = tz;
+                        calendar[i].end.tz = tz;
+                    }
                 }
 
             }
@@ -213,9 +216,9 @@ function clicker(number, unfillOk){
     }
     }
     catch(err){
-        if (e instanceof NoSuchElementException) {
+        if (err instanceof TypeError) {
            } else {
-             throw e;
+             throw err;
            }
          }
     document.dispatchEvent(new Event('mouseup'));
@@ -243,33 +246,64 @@ function setFree(){
     }
 }
 
-function CorrectTime(calendar, buffer){
+function correctZone(time){
+    if (typeof time.tz !== "undefined"){
+        let tempzone = new Date(time.toLocaleString('en-US', { timeZone: time.tz}));
+        let offset = moment(tempzone).diff(moment(time), "m")
+        
+        return moment(time).add(-offset, 'm').toDate();
+    } else {
+        return time;
+    }
+}
+
+function CorrectTime(calendar, buffer, wide, startDate){
     for (let [key, i] of Object.entries(calendar)){
-        if (i.type != "VEVENT" || !"start" in i || ! "end" in i || i.end === undefined || i.start === undefined){
+        if (i.type != "VEVENT" || i.end === undefined || i.start === undefined){
+            continue;
+        }
+        findRecurrence(calendar, i, startDate, wide, i.start.tz);
+    }
+    for (let [key, i] of Object.entries(calendar)){
+        if (i.type != "VEVENT" || i.end === undefined || i.start === undefined){
             continue;
         }
 
         i.start.setMinutes(i.start.getMinutes()-buffer);
         i.end.setMinutes(i.end.getMinutes()+buffer);
+
+        i.start.setMinutes(getFloor(i.start.getMinutes()));
+        i.end.setMinutes(getCeiling(i.end.getMinutes()));
+        
+        i.start = correctZone(i.start);
+        i.end = correctZone(i.end);
     }
     return calendar;
 }
 
-function SetGrid(calendar){
+function SetGrid(calendar, buffer){
     const [wide, high] = getGridRange();
-    let date = document.getElementById("YouGridSlots").parentElement.children[1];
+    let date;
+    for (let x = 0; x<wide; x++){
+        let text = document.getElementById("YouGridSlots").parentElement.children[x].innerText
+        if(text !== "" && typeof text !== "undefined"){
+            date = text;
+            break;
+        }
+    }
     let startDate = {
         time: 0,
         month: 0,
         day: 0,
-        year: (new Date).getFullYear() - 1900
+        year: (new Date).getFullYear(),
+        zone: Intl.DateTimeFormat().resolvedOptions().timeZone
     };
-    if (["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].includes(date.innerText.slice(0,3))){
+    if (["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].includes(date.slice(1))){
         startDate.month = Number(prompt("What is the month you would like the first day to be in (1-12)?")) - 1
-        startDate.day = Number(prompt("What is the day you would like the first day to be in?"))
+        startDate.day = Number(prompt("What is the day you would like the first day to be?"))
     }
     else{
-        switch (date.innerText.slice(0,3)){
+        switch (date.slice(0,3)){
             case "Jan":
                 startDate.month = 0;
                 break;
@@ -307,10 +341,9 @@ function SetGrid(calendar){
                 startDate.month = 11;
                 break;
             }
-        startDate.day = Number(date.innerText.split("\n")[0].slice(4))
+        startDate.day = Number(date.split("\n")[0].slice(4))
     }
 
-    // let time = document.getElementById("YouGrid").children[1].children[3].firstChild.innerText;
     let time = document.getElementById("YouGrid").children[2].innerText.split("\n")[0].slice(0,7);
     switch (time){
         case "12:00 A":
@@ -389,16 +422,16 @@ function SetGrid(calendar){
             startDate.time = 24;
             break;
     }
+
+    calendar = CorrectTime(calendar, buffer, wide, startDate)
     
     for (let [key, eve] of Object.entries(calendar)){
-        if (eve.type != "VEVENT" || !"start" in eve || ! "end" in eve || eve.end === undefined || eve.start === undefined){
+        if (eve.type != "VEVENT" || typeof eve.end === "undefined" || typeof eve.start === "undefined"){
             continue;
         }
         if (eve.transparency == "TRANSPARENT"){
             continue;
         }
-        eve.start.setMinutes(getFloor(eve.start.getMinutes()));
-        eve.end.setMinutes(getCeiling(eve.end.getMinutes()));
 
         let startdayaway = daysAway(startDate, eve.start);
         let enddayaway = daysAway(startDate, eve.end);
@@ -447,8 +480,7 @@ chrome.runtime.onMessage.addListener(
         awaitLoad();
         let iCalString = request.iCalString;
         let calendar = ical.parseICS(iCalString);
-        calendar = CorrectTime(calendar, Number(request.buffer));
-        SetGrid(calendar);
+        SetGrid(calendar, Number(request.buffer));
         console.log(sender.tab ?
                     "from a content script:" + sender.tab.url :
                     "from the extension");
