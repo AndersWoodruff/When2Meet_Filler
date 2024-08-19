@@ -1,5 +1,5 @@
 const ical = require('ical');
-var moment = require('moment');
+const moment = require('moment-timezone');
 
 const monthDays = {
     // Mapping month numbers to the number of days
@@ -176,6 +176,16 @@ function findRecurrence(calendar, event, initDate, width, tz){
                     while (typeof calendar[i] !== "undefined"){
                         i+=1;
                     }
+
+                    if (startDate.minutes() != moment(event.start).minutes() || startDate.hours() != moment(event.start).hours()){
+                        startDate.set("minute", moment(event.start).minutes())
+                        startDate.set("hour", moment(event.start).hours())
+                    }
+
+                    if (endDate.minutes() != moment(event.end).minutes() || endDate.hours() != moment(event.end).hours()){
+                        endDate.set("minute", moment(event.end).minutes())
+                        endDate.set("hour", moment(event.end).hours())
+                    }
                     
                     calendar[i] = {
                         start: startDate.toDate(),
@@ -207,9 +217,11 @@ function clickRange(start, end, width, height){
 }
 
 function clicker(number, unfillOk){
-    let unfullString = "vertical-align: top; display: inline-block; zoom: 1; width: 44px; height: 9px; font-size: 0px; border-left: 1px solid black; background: rgb(255, 222, 222); border-top: 1px solid black; border-right-color: black; border-bottom-color: black;";
+    let unfullString = "rgb(255, 222, 222)";
     try{
-    if (document.getElementById("YouTime" + number).style === unfullString && !unfillOk){
+    let timeSquare = document.getElementById("YouTime" + number)
+    let timeSquareColor = window.getComputedStyle(timeSquare).backgroundColor;
+    if (timeSquareColor === unfullString && !unfillOk){
     }
     else{
     document.getElementById("YouTime" + number).dispatchEvent(new Event('mousedown'));
@@ -246,7 +258,122 @@ function setFree(){
     }
 }
 
+function changeZoneName(time){
+    switch (time.tz) {
+        case "Pacific Daylight Time":
+        case "PDT":
+        case "Pacific Standard Time":
+        case "PST":
+            time.tz = "America/Los_Angeles";
+            break;
+        case "Mountain Daylight Time":
+        case "MDT":
+        case "Mountain Standard Time":
+        case "MST":
+            time.tz = "America/Denver";
+            break;
+        case "Central Daylight Time":
+        case "CDT":
+        case "Central Standard Time":
+        case "CST":
+            time.tz = "America/Chicago";
+            break;
+        case "Eastern Daylight Time":
+        case "EDT":
+        case "Eastern Standard Time":
+        case "EST":
+            time.tz = "America/New_York";
+            break;
+        case "Alaska Daylight Time":
+        case "AKDT":
+        case "Alaska Standard Time":
+        case "AKST":
+            time.tz = "America/Anchorage";
+            break;
+        case "Hawaii-Aleutian Daylight Time":
+        case "HADT":
+        case "Hawaii-Aleutian Standard Time":
+        case "HAST":
+            time.tz = "America/Adak";
+            break;
+        case "Atlantic Daylight Time":
+        case "ADT":
+        case "Atlantic Standard Time":
+        case "AST":
+            time.tz = "America/Halifax";
+            break;
+        case "Newfoundland Daylight Time":
+        case "NDT":
+        case "Newfoundland Standard Time":
+        case "NST":
+            time.tz = "America/St_Johns";
+            break;
+        case "Greenwich Mean Time":
+        case "GMT":
+        case "British Summer Time":
+        case "BST":
+            time.tz = "Europe/London";
+            break;
+        case "Central European Time":
+        case "CET":
+        case "Central European Summer Time":
+        case "CEST":
+            time.tz = "Europe/Paris";
+            break;
+        case "Eastern European Time":
+        case "EET":
+        case "Eastern European Summer Time":
+        case "EEST":
+            time.tz = "Europe/Athens";
+            break;
+        case "Japan Standard Time":
+        case "JST":
+            time.tz = "Asia/Tokyo";
+            break;
+        case "China Standard Time":
+        case "CST":
+            time.tz = "Asia/Shanghai";
+            break;
+        case "India Standard Time":
+        case "IST":
+            time.tz = "Asia/Kolkata";
+            break;
+        case "Australian Eastern Daylight Time":
+        case "AEDT":
+        case "Australian Eastern Standard Time":
+        case "AEST":
+            time.tz = "Australia/Sydney";
+            break;
+        case "Australian Central Daylight Time":
+        case "ACDT":
+        case "Australian Central Standard Time":
+        case "ACST":
+            time.tz = "Australia/Adelaide";
+            break;
+        case "Australian Western Standard Time":
+        case "AWST":
+            time.tz = "Australia/Perth";
+            break;
+        case "Singapore Time":
+        case "SGT":
+            time.tz = "Asia/Singapore";
+            break;
+        case "Gulf Standard Time":
+        case "GST":
+            time.tz = "Asia/Dubai";
+            break;
+        }
+
+    if (!new moment.tz.names().includes(time.tz) ){
+        time.tz = undefined;
+    }
+
+}
+
 function correctZone(time){
+
+    changeZoneName(time);
+
     if (typeof time.tz !== "undefined"){
         let tempzone = new Date(time.toLocaleString('en-US', { timeZone: time.tz}));
         let offset = moment(tempzone).diff(moment(time), "m")
