@@ -4,7 +4,9 @@
     "version": "0.1.0",
     "manifest_version": 3,
     "icons": {
-      "thumbnail": "when2meet-icon-filled-256.png"
+      "16": "when2meet-icon-filled16.png",
+      "48": "when2meet-icon-filled48.png",
+      "128": "when2meet-icon-filled128.png"
     },
 
     "action":{
